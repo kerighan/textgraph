@@ -144,7 +144,7 @@ class TextGraph:
         topics = sorted(topics, key=lambda x: x["size"], reverse=True)
         return topics
 
-    def show(self, topics, content=None, topn=20):
+    def show(self, topics, content, topn=20):
         import itertools
         from collections import Counter
 
@@ -157,10 +157,11 @@ class TextGraph:
             topic = topics[i]
             size = topic["size"]
             print(i + 1)
-            print(topic["docs"].head(20))
+            docs = content.iloc[topic["docs"]]
+            print(docs.head(20))
             print(topic["keywords"][:50])
 
-            res = ner(topic["docs"])
+            res = ner(docs)
             count_per = Counter(itertools.chain(
                 *res.apply(lambda x: [y for y, c in x if c == "PER"])))
             print(count_per.most_common(20))
@@ -168,7 +169,7 @@ class TextGraph:
                 *res.apply(lambda x: [y for y, c in x if c == "ORG"])))
             print(count_org.most_common(20))
 
-            texts = ". ".join(topic["docs"].head(20).tolist())
+            texts = ". ".join(docs.head(20).tolist())
             print(summarizer([texts[:1024]])[0][0]["summary_text"])
 
             print(f"size={size}")
@@ -189,9 +190,10 @@ class TextGraph:
             remove_digits=True,
             blacklist={"abonné"},
             topn=20):
-        from flowing2.bubble import bubble
-        import pandas as pd
         import os
+
+        import pandas as pd
+        from flowing2.bubble import bubble
 
         if not os.path.exists(out_folder):
             os.makedirs(out_folder)
