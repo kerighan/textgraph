@@ -208,7 +208,8 @@ class TextGraph:
             from community import best_partition, modularity
         from convectors.graph import relabel
 
-        community = relabel(best_partition(self.G, random_state=0))
+        community = relabel(best_partition(
+            self.G, random_state=0, resolution=resolution))
         print(f"Q={modularity(community, self.G):.2f}")
 
         cm2nodes = {}
@@ -261,12 +262,11 @@ class TextGraph:
         sentiment = np.bincount(labels, minlength=6)[1:]
         return sentiment, mean
 
-    def dashboard(self, name="topic", topn=20, sentiment=True):
+    def dashboard(self, texts=None, name="topic", topn=20, sentiment=True):
         import itertools
         from collections import Counter
 
         import pandas as pd
-        from convectors.huggingface import Summarize
         from convectors.layers import NER
         from conviction import Board, Tab
         from conviction.components import Bar, IndicatorCards, Table
@@ -274,6 +274,9 @@ class TextGraph:
 
         if sentiment:
             self.setup_sentiment()
+
+        if texts is None:
+            texts = self.texts
 
         board = Board("Topic")
 
@@ -286,7 +289,7 @@ class TextGraph:
             size = topic["size"]
             rel_size = 100*size/total
 
-            docs = self.texts.iloc[topic["docs"]]
+            docs = texts.iloc[topic["docs"]]
             t = pd.DataFrame()
             t["text"] = docs
 
@@ -311,7 +314,7 @@ class TextGraph:
 
             if self.dates is not None:
                 from conviction.components import Line
-                from virality import SIR
+                from virality.sigmoid import fit_sigmoid
                 dates = pd.to_datetime(
                     self.dates.iloc[topic["docs"]]).apply(
                         lambda x: x.replace(tzinfo=None))
@@ -322,7 +325,8 @@ class TextGraph:
                 dates.reset_index(inplace=True)
                 dates.columns = ["date", "volume"]
 
-                sir = SIR(dates.volume.values)["R_0"]
+                # sir = SIR(dates.volume.values)["R_0"]
+                _, sir = fit_sigmoid(dates.volume.values)
                 indicators.append(
                     {"indicator": f"{sir:.2f}", "title": "R0", "description": "virality"})
 
